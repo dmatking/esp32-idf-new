@@ -57,28 +57,6 @@ idf-new **does not install ESP-IDF for you** — it generates projects that ESP-
 
 ---
 
-## What This Tool Does
-
-ESP-IDF users often accumulate a pile of boards, each slightly different:
-
-- different pins
-- different LCDs
-- different SPI buses
-- different touch controllers
-- different UART wiring
-
-Setting up a new project for an existing board usually means:
-
-- copy an old repo
-- fix board pins
-- rip out hacks
-- clean up unused code
-- hope it still builds
-
-idf-new replaces that workflow with a single command that generates **only the files the project needs** — no bloat, no leftovers.
-
----
-
 ## Core Concepts
 
 idf-new is built around three tiers:
