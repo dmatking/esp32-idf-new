@@ -1,0 +1,1 @@
+list(APPEND EXTRA_SRCS "i2c_header.c")
