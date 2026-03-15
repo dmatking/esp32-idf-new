@@ -99,11 +99,11 @@ SD D3/CS held HIGH by TCA9554 IO expander.
 ## Verified Working
 
 - [x] LCD (ST77916 QSPI, 360x360)
-- [ ] Touch (CST816S)
-- [ ] IMU (QMI8658, accel + gyro)
-- [ ] RTC (PCF85063)
-- [ ] Speaker (MAX98357A I2S DAC)
-- [ ] Microphone (MSM261S4030H0R I2S)
-- [ ] UART header (TX=IO43, RX=IO44)
-- [ ] TF card (TCA9554PWR IO expander + SDMMC native 1-bit)
+- [x] Touch (CST816S)
+- [x] IMU (QMI8658, accel + gyro)
+- [x] RTC (PCF85063)
+- [x] Speaker (MAX98357A I2S DAC)
+- [x] Microphone (MSM261S4030H0R I2S)
+- [x] UART header (TX=IO43, RX=IO44)
+- [x] TF card (TCA9554PWR IO expander + SDMMC native 1-bit)
 - [ ] I2C header (SCL=IO10, SDA=IO11, shared bus with IMU/RTC/IO expander)
