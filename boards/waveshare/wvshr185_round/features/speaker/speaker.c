@@ -11,7 +11,7 @@
 
 static const char *TAG = "SPEAKER";
 
-#define I2S_PORT        I2S_NUM_0
+#define I2S_PORT        I2S_NUM_1
 #define I2S_PIN_BCK     48
 #define I2S_PIN_WS      38   // LRCK
 #define I2S_PIN_DOUT    47

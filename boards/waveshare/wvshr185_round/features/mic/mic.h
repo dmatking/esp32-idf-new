@@ -6,8 +6,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// PDM microphone input (SCK=IO15, WS=IO2, SD=IO39).
-// Sample rate and bits configurable via menuconfig.
+// MSM261S4030H0R I2S digital microphone (BCK=IO15, WS=IO2, SD=IO39, EN=IO12).
+// Outputs right channel (L/R tied high). Sample rate configurable via menuconfig.
+// Returns 16-bit PCM samples converted from 32-bit I2S frames.
 
 esp_err_t mic_init(void);
 

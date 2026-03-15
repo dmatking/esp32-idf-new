@@ -146,6 +146,11 @@ static void lcd_sanity_task(void *arg)
     }
 }
 
+void board_lcd_fill(uint16_t color)
+{
+    fill_screen(color);
+}
+
 void board_lcd_sanity_test(void)
 {
     if (!s_panel) {
