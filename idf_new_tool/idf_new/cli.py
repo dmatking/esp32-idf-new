@@ -162,6 +162,8 @@ def _handle_listing(args: argparse.Namespace, modules: list) -> bool:
                 traits = _format_traits(info)
                 if traits:
                     print(f"    Tags: {', '.join(traits)}")
+                if info.board_features:
+                    print(f"    Features: {', '.join(info.board_features)}")
                 print()
         else:
             print("No boards found under boards/.")
