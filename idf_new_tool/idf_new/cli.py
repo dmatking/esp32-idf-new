@@ -152,7 +152,7 @@ def _handle_listing(args: argparse.Namespace, modules: list) -> bool:
     if args.list_boards:
         boards = list_boards()
         if boards:
-            print("Available boards:")
+            print("Available boards:\n")
             for info in boards:
                 print(f"  - {info.board_id}")
                 print(f"    Name: {info.display_name}")
@@ -161,7 +161,8 @@ def _handle_listing(args: argparse.Namespace, modules: list) -> bool:
                     print(f"    Screen: {screen_desc}")
                 traits = _format_traits(info)
                 if traits:
-                    print(f"    Traits: {', '.join(traits)}")
+                    print(f"    Tags: {', '.join(traits)}")
+                print()
         else:
             print("No boards found under boards/.")
         return True
@@ -201,7 +202,7 @@ def main() -> None:
     project_name = args.project_name or _prompt_project_name("generic_esp32")
 
     enabled_modules = [m.flag for m in modules if getattr(args, m.flag)]
-    enabled_features = list(args.features)
+    enabled_features = list(dict.fromkeys(args.features))
 
     options = GenerationOptions(
         project_name=project_name,
