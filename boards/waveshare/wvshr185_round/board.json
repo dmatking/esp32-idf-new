@@ -12,5 +12,5 @@
     "round",
     "qspi"
   ],
-  "board_features": ["imu", "rtc", "speaker", "mic", "uart"]
+  "board_features": ["imu", "rtc", "speaker", "mic", "uart", "tf_card"]
 }

@@ -1,0 +1,16 @@
+menu "TF Card (SD) Configuration"
+
+    config TF_CARD_MOUNT_POINT
+        string "VFS mount point"
+        default "/sdcard"
+        help
+            Path where the SD card FAT filesystem will be mounted.
+
+    config TF_CARD_MAX_FILES
+        int "Maximum open files"
+        default 4
+        range 1 20
+        help
+            Maximum number of files that can be open simultaneously.
+
+endmenu
