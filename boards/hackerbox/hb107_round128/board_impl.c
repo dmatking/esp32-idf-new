@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "board_interface.h"
+
+#include <string.h>
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+#include "esp_heap_caps.h"
+#include "esp_lcd_gc9a01.h"
+#include "esp_lcd_panel_io.h"
+#include "esp_lcd_panel_ops.h"
 #include "esp_log.h"
 
-#include "driver/spi_master.h"
-#include "esp_lcd_panel_ops.h"
-#include "esp_lcd_panel_io.h"
-#include "esp_lcd_gc9a01.h"
-
-#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 
 // --- HARDWARE CONFIGURATION (Plain ESP32-D0WD) ---
@@ -29,6 +32,8 @@
 
 static const char *TAG = "HB_107_128_RND";
 static esp_lcd_panel_handle_t panel = NULL;
+static uint16_t *s_fb = NULL;
+static SemaphoreHandle_t s_flush_sem = NULL;
 
 // GC9A01 over SPI expects RGB565 bytes MSB-first on the wire. The esp_lcd SPI
 // I/O helper doesn't swap payload bytes for you, so convert every color word
@@ -38,6 +43,19 @@ static inline uint16_t swap_bytes_to_panel_color(uint16_t color)
     return (color << 8) | (color >> 8);
 }
 
+static inline uint16_t pack_rgb565_swapped(uint8_t r, uint8_t g, uint8_t b)
+{
+    uint16_t c = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    return (c >> 8) | (c << 8);
+}
+
+static bool flush_done_cb(esp_lcd_panel_io_handle_t io,
+                          esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+{
+    BaseType_t woken = pdFALSE;
+    xSemaphoreGiveFromISR(s_flush_sem, &woken);
+    return (woken == pdTRUE);
+}
 
 // Helper: fill entire screen with a solid color using draw_bitmap
 static void fill_screen(uint16_t color)
@@ -77,6 +95,9 @@ void board_init(void)
     };
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
+    s_flush_sem = xSemaphoreCreateBinary();
+    assert(s_flush_sem);
+
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_io_spi_config_t io_cfg = {
         .dc_gpio_num = PIN_NUM_DC,
@@ -86,6 +107,7 @@ void board_init(void)
         .lcd_param_bits = 8,
         .spi_mode = 0,
         .trans_queue_depth = 10,
+        .on_color_trans_done = flush_done_cb,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(
         (esp_lcd_spi_bus_handle_t)LCD_HOST,
@@ -115,6 +137,10 @@ void board_init(void)
     };
     ESP_ERROR_CHECK(gpio_config(&bl_cfg));
     gpio_set_level(PIN_NUM_BK_LIGHT, 1);
+
+    s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * LCD_V_RES * sizeof(uint16_t), 1,
+                MALLOC_CAP_DMA);
+    assert(s_fb);
 
     ESP_LOGI(TAG, "HackerBox 107 1.28 Round ESP32-D0WD init done.");
 }
@@ -156,4 +182,49 @@ void board_lcd_sanity_test(void)
     }
     ESP_LOGI(TAG, "Starting LCD sanity task...");
     xTaskCreate(lcd_sanity_task, "lcd_sanity", 4096, NULL, 4, NULL);
+}
+
+// --- Display drawing API ---
+
+int board_lcd_width(void) { return LCD_H_RES; }
+int board_lcd_height(void) { return LCD_V_RES; }
+
+void board_lcd_flush(void)
+{
+    if (!panel || !s_fb) return;
+    esp_lcd_panel_draw_bitmap(panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb);
+    xSemaphoreTake(s_flush_sem, portMAX_DELAY);
+}
+
+void board_lcd_clear(void)
+{
+    if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));
+}
+
+void board_lcd_set_pixel_raw(int x, int y, uint16_t color)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = color;
+}
+
+void board_lcd_set_pixel_rgb(int x, int y, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = pack_rgb565_swapped(r, g, b);
+}
+
+uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    return pack_rgb565_swapped(r, g, b);
+}
+
+uint16_t board_lcd_get_pixel_raw(int x, int y)
+{
+    return s_fb ? s_fb[y * LCD_H_RES + x] : 0;
+}
+
+void board_lcd_unpack_rgb(uint16_t color, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    color = (color >> 8) | (color << 8);
+    *r = ((color >> 11) & 0x1F) << 3;
+    *g = ((color >> 5) & 0x3F) << 2;
+    *b = (color & 0x1F) << 3;
 }

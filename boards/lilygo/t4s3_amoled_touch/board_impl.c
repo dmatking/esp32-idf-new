@@ -63,10 +63,25 @@ void board_init(void)
         ESP_LOGW(TAG, "Power init failed, continuing");
     }
     display_init();
+
+    // amoled_height() = 450 (columns), amoled_width() = 600 (rows)
+    const int w = amoled_height();
+    const int h = amoled_width();
+    s_fb = heap_caps_aligned_calloc(4, w * h * sizeof(uint16_t), 1,
+                MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    assert(s_fb);
 }
+
+static uint16_t *s_fb = NULL;
 
 // Byte-swap RGB565 for SPI wire order (little-endian ESP32 -> big-endian display)
 static inline uint16_t swap16(uint16_t c) { return (c >> 8) | (c << 8); }
+
+static inline uint16_t pack_rgb565_swapped(uint8_t r, uint8_t g, uint8_t b)
+{
+    uint16_t c = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    return (c >> 8) | (c << 8);
+}
 
 // Fill screen using full-frame PSRAM push (row-by-row does not work on this panel)
 static void fill_screen(uint16_t color)
@@ -115,6 +130,55 @@ void board_lcd_sanity_test(void)
 {
     ESP_LOGI(TAG, "Starting LCD sanity task...");
     xTaskCreate(lcd_sanity_task, "lcd_sanity", 4096, NULL, 4, NULL);
+}
+
+// --- Display drawing API ---
+// Logical dimensions: 450 wide x 600 tall (amoled_height x amoled_width).
+// Framebuffer stores byte-swapped RGB565 matching the SPI wire format.
+
+int board_lcd_width(void) { return amoled_height(); }   // 450
+int board_lcd_height(void) { return amoled_width(); }    // 600
+
+void board_lcd_flush(void)
+{
+    if (!s_fb) return;
+    const int w = amoled_height();
+    const int h = amoled_width();
+    display_push_colors(0, 0, w, h, s_fb);
+}
+
+void board_lcd_clear(void)
+{
+    if (!s_fb) return;
+    memset(s_fb, 0, amoled_height() * amoled_width() * sizeof(uint16_t));
+}
+
+void board_lcd_set_pixel_raw(int x, int y, uint16_t color)
+{
+    if (s_fb) s_fb[y * amoled_height() + x] = color;
+}
+
+void board_lcd_set_pixel_rgb(int x, int y, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (s_fb) s_fb[y * amoled_height() + x] = pack_rgb565_swapped(r, g, b);
+}
+
+uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    return pack_rgb565_swapped(r, g, b);
+}
+
+uint16_t board_lcd_get_pixel_raw(int x, int y)
+{
+    return s_fb ? s_fb[y * amoled_height() + x] : 0;
+}
+
+void board_lcd_unpack_rgb(uint16_t color, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    color = (color >> 8) | (color << 8);
+    *r = ((color >> 11) & 0x1F) << 3;
+    *g = ((color >> 5) & 0x3F) << 2;
+    *b = (color & 0x1F) << 3;
 }
 #ifndef HIGH
 #define HIGH 1

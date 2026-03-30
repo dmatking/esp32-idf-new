@@ -3,18 +3,18 @@
 
 #include "board_interface.h"
 
-#include <stdio.h>
 #include <string.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
-#include "esp_log.h"
 #include "driver/gpio.h"
-
+#include "esp_heap_caps.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
+#include "esp_log.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 
 #define TAG "ESPS3_DEVKITC_NHD24"
 #define BOARD_NAME "ESP32-S3-DevKitC + Newhaven 2.4\" IPS (ST7789 i80)"
@@ -45,11 +45,21 @@ static uint16_t s_line_buf[LCD_H_RES * CHUNK_LINES];
 static esp_lcd_i80_bus_handle_t   s_i80_bus  = NULL;
 static esp_lcd_panel_io_handle_t  s_panel_io = NULL;
 static esp_lcd_panel_handle_t     s_panel    = NULL;
+static uint16_t *s_fb = NULL;
+static SemaphoreHandle_t s_flush_sem = NULL;
 static bool s_panel_ready = false;
 
 static void delay_ms(uint32_t ms)
 {
     vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
+static bool flush_done_cb(esp_lcd_panel_io_handle_t io,
+                          esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+{
+    BaseType_t woken = pdFALSE;
+    xSemaphoreGiveFromISR(s_flush_sem, &woken);
+    return (woken == pdTRUE);
 }
 
 // Fill the whole screen with a solid RGB565 color
@@ -114,12 +124,16 @@ static void lcd_init(void)
 
     ESP_LOGI(TAG, "Configuring panel IO (i80)");
 
+    s_flush_sem = xSemaphoreCreateBinary();
+    assert(s_flush_sem);
+
     esp_lcd_panel_io_i80_config_t io_config = {
         .cs_gpio_num       = LCD_PIN_CS,
         .pclk_hz           = 8 * 1000 * 1000,  // start conservative
         .trans_queue_depth = 10,
         .lcd_cmd_bits      = 8,
         .lcd_param_bits    = 8,
+        .on_color_trans_done = flush_done_cb,
         .dc_levels = {
             .dc_idle_level  = 0,
             .dc_cmd_level   = 0,
@@ -167,6 +181,11 @@ static void lcd_init(void)
     esp_lcd_panel_disp_on_off(s_panel, true);
 
     s_panel_ready = true;
+
+    s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * LCD_V_RES * sizeof(uint16_t), 1,
+                MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    assert(s_fb);
+
     ESP_LOGI(TAG, "Panel init done");
 }
 
@@ -211,4 +230,50 @@ void board_lcd_sanity_test(void)
 
     ESP_LOGI(TAG, "Fill BLACK");
     lcd_fill_color(0x0000);
+}
+
+// --- Display drawing API ---
+// The i80 driver handles byte-swapping (swap_color_bytes=1), so the
+// framebuffer stores standard RGB565 without manual byte swap.
+
+int board_lcd_width(void) { return LCD_H_RES; }
+int board_lcd_height(void) { return LCD_V_RES; }
+
+void board_lcd_flush(void)
+{
+    if (!s_panel_ready || !s_fb) return;
+    esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb);
+    xSemaphoreTake(s_flush_sem, portMAX_DELAY);
+}
+
+void board_lcd_clear(void)
+{
+    if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));
+}
+
+void board_lcd_set_pixel_raw(int x, int y, uint16_t color)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = color;
+}
+
+void board_lcd_set_pixel_rgb(int x, int y, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
+uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
+uint16_t board_lcd_get_pixel_raw(int x, int y)
+{
+    return s_fb ? s_fb[y * LCD_H_RES + x] : 0;
+}
+
+void board_lcd_unpack_rgb(uint16_t color, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    *r = ((color >> 11) & 0x1F) << 3;
+    *g = ((color >> 5) & 0x3F) << 2;
+    *b = (color & 0x1F) << 3;
 }

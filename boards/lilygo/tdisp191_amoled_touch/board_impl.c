@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "driver/spi_master.h"
+#include "esp_heap_caps.h"
 #include "esp_lcd_touch_cst816s.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -61,6 +62,7 @@ static bool s_lcd_ready = false;
 static esp_lcd_touch_handle_t s_touch = NULL;
 static bool s_touch_task_started = false;
 static uint16_t s_tx_buf[LCD_SEND_CHUNK_PIXELS];
+static uint16_t *s_fb = NULL;
 static const char *TAG = "BOARD_TDS3_AMOLED";
 
 // The RM67162 QSPI wiring on this board swaps the green/blue bit fields.
@@ -335,6 +337,10 @@ void board_init(void)
     ESP_LOGI(TAG, "%s init", BOARD_NAME);
     ESP_ERROR_CHECK(init_display());
     init_touch();
+
+    s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * LCD_V_RES * sizeof(uint16_t), 1,
+                MALLOC_CAP_DEFAULT);
+    assert(s_fb);
 }
 
 const char *board_get_name(void)
@@ -366,4 +372,51 @@ void board_lcd_sanity_test(void)
     fill_screen(blue);
     vTaskDelay(pdMS_TO_TICKS(500));
     fill_screen(black);
+}
+
+// --- Display drawing API ---
+// Framebuffer stores standard RGB565. The encode_panel_color() remap
+// (green/blue field swap for this RM67162 wiring) is applied during flush
+// inside amoled_push_buffer().
+
+int board_lcd_width(void) { return LCD_H_RES; }
+int board_lcd_height(void) { return LCD_V_RES; }
+
+void board_lcd_flush(void)
+{
+    if (!s_lcd_ready || !s_fb) return;
+    amoled_set_window(0, 0, LCD_H_RES - 1, LCD_V_RES - 1);
+    amoled_push_buffer(s_fb, LCD_H_RES * LCD_V_RES);
+}
+
+void board_lcd_clear(void)
+{
+    if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));
+}
+
+void board_lcd_set_pixel_raw(int x, int y, uint16_t color)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = color;
+}
+
+void board_lcd_set_pixel_rgb(int x, int y, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (s_fb) s_fb[y * LCD_H_RES + x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
+uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
+uint16_t board_lcd_get_pixel_raw(int x, int y)
+{
+    return s_fb ? s_fb[y * LCD_H_RES + x] : 0;
+}
+
+void board_lcd_unpack_rgb(uint16_t color, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    *r = ((color >> 11) & 0x1F) << 3;
+    *g = ((color >> 5) & 0x3F) << 2;
+    *b = (color & 0x1F) << 3;
 }

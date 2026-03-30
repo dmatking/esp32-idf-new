@@ -71,7 +71,7 @@ idf-new **does not install ESP-IDF for you** — it generates projects that ESP-
 
 idf-new is built around three tiers:
 
-**1. Boards** — Hardware-specific wiring, pin definitions, and LCD/touch initialization. Every board implements a small C interface (`board_interface.h`).
+**1. Boards** — Hardware-specific wiring, pin definitions, LCD/touch initialization, and display drawing primitives. Every board implements a small C interface (`board_interface.h`).
 
 **2. Board Features** — Optional peripherals that are physically on the board (TF card slot, speaker, buttons, etc.). These are board-specific — a feature only exists if the board has that hardware.
 
@@ -138,8 +138,10 @@ Board features are board-specific — check `boards/<vendor>/<board>/features/` 
 ## Adding a New Board
 
 1. Create `boards/<vendor>/<board_name>/`
-2. Add `board_impl.c` implementing the four functions from `board_interface.h`:
-   - `board_init()`, `board_get_name()`, `board_has_lcd()`, `board_lcd_sanity_test()`
+2. Add `board_impl.c` implementing the functions from `board_interface.h`:
+   - **Required:** `board_init()`, `board_get_name()`, `board_has_lcd()`
+   - **LCD boards:** `board_lcd_sanity_test()`, `board_lcd_fill()`, plus the display drawing API (`board_lcd_width()`, `board_lcd_height()`, `board_lcd_flush()`, `board_lcd_clear()`, `board_lcd_set_pixel_raw()`, `board_lcd_set_pixel_rgb()`, `board_lcd_pack_rgb()`, `board_lcd_get_pixel_raw()`, `board_lcd_unpack_rgb()`)
+   - Weak no-op defaults are provided in `board_defaults.c` for headless boards
 3. Optionally add:
    - `board.json` — metadata for `--list-boards`
    - `idf_component.yml` — component dependencies
@@ -227,6 +229,7 @@ This is safe for a dev tool with a single dependency (PyYAML), but the venv appr
 idf-new grew out of repeatedly solving the same ESP-IDF setup problems across many boards and projects.
 
 Rather than maintaining dozens of near-duplicate repos, this tool centralizes:
+
 - board wiring knowledge
 - optional peripheral implementations
 - generic driver modules
@@ -245,6 +248,7 @@ ESP-IDF and bundled third-party libraries are licensed separately under permissi
 ---
 
 Built with:
+
 - Python 3.13.5
 - ESP-IDF 5.5.1
 - [Claude Code](https://claude.ai/claude-code)
