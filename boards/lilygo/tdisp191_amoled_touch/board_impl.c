@@ -54,7 +54,7 @@ static const lcd_cmd_t s_rm67162_init[] = {
     {0x5100, {0x00}, 0x01},
     {0x2900, {0x00}, 0x80},
     {0x5100, {AMOLED_DEFAULT_BRIGHTNESS}, 0x01},
-    {0x3600, {0x68}, 0x01}, // enable BGR bit so colors appear in RGB order
+    {0x3600, {0x60}, 0x01}, // landscape orientation (MX=1, MV=1)
 };
 
 static spi_device_handle_t s_spi = NULL;
@@ -65,28 +65,11 @@ static uint16_t s_tx_buf[LCD_SEND_CHUNK_PIXELS];
 static uint16_t *s_fb = NULL;
 static const char *TAG = "BOARD_TDS3_AMOLED";
 
-// The RM67162 QSPI wiring on this board swaps the green/blue bit fields.
-// These helpers remap standard RGB565 colors into the panel's expected layout
-// so user code can continue to work with canonical RGB565 values.
-static inline uint16_t expand5_to6(uint16_t value)
+// RM67162 expects big-endian RGB565 over QSPI, but ESP32-S3 stores
+// little-endian uint16_t.  Byte-swap each pixel before DMA.
+static inline uint16_t bswap16(uint16_t v)
 {
-    return (uint16_t)((value << 1) | (value >> 4));
-}
-
-static inline uint16_t shrink6_to5(uint16_t value)
-{
-    return (uint16_t)(((uint32_t)value * 31u + 15u) / 63u);
-}
-
-static inline uint16_t encode_panel_color(uint16_t rgb)
-{
-    uint16_t red5 = (rgb >> 11) & 0x1F;
-    uint16_t green6 = (rgb >> 5) & 0x3F;
-    uint16_t blue5 = rgb & 0x1F;
-
-    uint16_t blue_field = expand5_to6(blue5) << 5; // panel treats bits10:5 as blue
-    uint16_t green_field = shrink6_to5(green6);    // panel treats bits4:0 as green
-    return (red5 << 11) | blue_field | green_field;
+    return (v >> 8) | (v << 8);
 }
 
 static inline void panel_select(void)
@@ -144,7 +127,7 @@ static void amoled_push_buffer(const uint16_t *data, size_t pixel_count)
             chunk = LCD_SEND_CHUNK_PIXELS;
         }
         for (size_t i = 0; i < chunk; ++i) {
-            s_tx_buf[i] = encode_panel_color(p[i]);
+            s_tx_buf[i] = bswap16(p[i]);
         }
 
         spi_transaction_ext_t t = {0};
@@ -375,8 +358,8 @@ void board_lcd_sanity_test(void)
 }
 
 // --- Display drawing API ---
-// Framebuffer stores standard RGB565. The encode_panel_color() remap
-// (green/blue field swap for this RM67162 wiring) is applied during flush
+// Framebuffer stores standard RGB565. The byte-swap to big-endian
+// (required by the RM67162 QSPI interface) is applied during flush
 // inside amoled_push_buffer().
 
 int board_lcd_width(void) { return LCD_H_RES; }
