@@ -1,0 +1,18 @@
+{
+  "display_name": "Waveshare ESP32-P4-WIFI6-Touch-LCD-4B",
+  "panel": "ST7703",
+  "has_touch": true,
+  "screen": {
+    "size_inches": 4.0,
+    "resolution": "720x720",
+    "technology": "IPS",
+    "shape": "rect"
+  },
+  "traits": [
+    "mipi-dsi",
+    "rgb888",
+    "esp32p4",
+    "wifi6"
+  ],
+  "board_features": []
+}

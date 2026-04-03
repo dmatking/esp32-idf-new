@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.3"
+  espressif/esp_hosted: "*"
+  espressif/esp_wifi_remote: "*"
+  espressif/esp_lcd_touch_gt911: "^1.0.0"
