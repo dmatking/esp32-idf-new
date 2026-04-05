@@ -1,4 +1,4 @@
-# idf-new — ESP-IDF Project Generator
+# esp32-idf-new — ESP-IDF Project Generator
 
 **idf-new** is a command-line tool that generates clean, minimal ESP-IDF projects for specific ESP32 boards. Pick a board, pick optional peripherals and modules, and get a ready-to-build project — without copy-pasting old repos or re-discovering pinouts.
 
@@ -12,7 +12,7 @@ idf-new my_project --board waveshare/wvshr200_touch --feature tf_card --module g
 
 ```bash
 git clone https://github.com/dmatking/esp32-idf-new.git
-cd idf-new
+cd esp32-idf-new
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e idf_new_tool
@@ -24,7 +24,7 @@ After the initial setup, activate the venv at the start of each session alongsid
 
 ```bash
 source ~/esp/esp-idf/export.sh
-source ~/idf-new/.venv/bin/activate
+source ~/esp32-idf-new/.venv/bin/activate
 ```
 
 > On Debian/Raspberry Pi OS, system Python is externally managed and blocks global pip installs. A venv sidesteps this cleanly. If you'd prefer a one-liner without a venv, see [Alternative: system-wide install](#alternative-system-wide-install).
@@ -202,7 +202,7 @@ idf-new must be installed as an editable install from the repo checkout — it r
 
 ```bash
 git clone https://github.com/dmatking/esp32-idf-new.git
-cd idf-new
+cd esp32-idf-new
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e idf_new_tool
