@@ -11,7 +11,7 @@ idf-new my_project --board waveshare/wvshr200_touch --feature tf_card --module g
 ## Quick Start
 
 ```bash
-git clone https://github.com/dmatking/idf-new.git
+git clone https://github.com/dmatking/esp32-idf-new.git
 cd idf-new
 python3 -m venv .venv
 source .venv/bin/activate
@@ -201,7 +201,7 @@ Use `idf-new --list-modules` to see registered modules.
 idf-new must be installed as an editable install from the repo checkout — it reads `boards/`, `modules/`, and `idf-templates/` from the repo at runtime.
 
 ```bash
-git clone https://github.com/dmatking/idf-new.git
+git clone https://github.com/dmatking/esp32-idf-new.git
 cd idf-new
 python3 -m venv .venv
 source .venv/bin/activate
