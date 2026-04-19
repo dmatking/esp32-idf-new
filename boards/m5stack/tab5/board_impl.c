@@ -167,8 +167,8 @@ static void pi4ioe_init(void)
     i2c_master_transmit(dev1, wb, 2, I2C_TIMEOUT_MS);
     wb[0] = PI4IO_REG_PULL_EN; wb[1] = 0b01111111;
     i2c_master_transmit(dev1, wb, 2, I2C_TIMEOUT_MS);
-    // Drive SPK_EN(P1), EXT5V_EN(P2), LCD_RST(P4), TP_RST(P5), CAM_RST(P6) high
-    wb[0] = PI4IO_REG_OUT_SET; wb[1] = 0b01110110;
+    // Drive EXT5V_EN(P2), LCD_RST(P4), TP_RST(P5), CAM_RST(P6) high; leave SPK_EN(P1) low
+    wb[0] = PI4IO_REG_OUT_SET; wb[1] = 0b01110100;
     i2c_master_transmit(dev1, wb, 2, I2C_TIMEOUT_MS);
 
     i2c_device_config_t dev_cfg2 = {
