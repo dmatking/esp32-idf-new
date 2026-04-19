@@ -40,13 +40,6 @@ void app_main(void)
     ESP_LOGI(TAG, "app_main starting");
     board_init();
 
-    if (board_has_lcd()) {
-        ESP_LOGI(TAG, "Board has LCD, running sanity test...");
-        board_lcd_sanity_test();
-    } else {
-        ESP_LOGI(TAG, "Board has no LCD configured.");
-    }
-
     static heartbeat_params_t hb = { .period_ms = 1000 };
 
     xTaskCreate(
@@ -57,4 +50,13 @@ void app_main(void)
         5,
         NULL
     );
+
+    if (board_has_lcd()) {
+        ESP_LOGI(TAG, "Board has LCD, running sanity test...");
+        while (1) {
+            board_lcd_sanity_test();
+        }
+    } else {
+        ESP_LOGI(TAG, "Board has no LCD configured.");
+    }
 }
