@@ -36,21 +36,32 @@
 #define PIN_TOUCH_IRQ  36  // input-only GPIO, low = touched
 
 // XPT2046 control bytes: start=1, channel, 12-bit, differential, PD=00
-// PD=00 = power-down between conversions; re-enables PENIRQ after each read.
-// PD=11 (0xD3/0x93) would disable PENIRQ and our IRQ-based detection breaks.
-#define XPT_CMD_X  0xD0   // channel X+, diff, power-down/PENIRQ enabled
-#define XPT_CMD_Y  0x90   // channel Y+, diff, power-down/PENIRQ enabled
+// PD=00 re-enables PENIRQ after each read; PD=11 (0xD3/0x93) breaks IRQ detection.
+#define XPT_CMD_X  0xD0
+#define XPT_CMD_Y  0x90
 
 // --- RGB LED: common anode, active LOW ---
 #define PIN_LED_R 17
 #define PIN_LED_G 22
 #define PIN_LED_B 16
 
-static esp_lcd_panel_handle_t s_panel = NULL;
+// ---------------------------------------------------------------------------
+// Stripe framebuffer — 480×320 won't fit in ESP32 internal SRAM (~163 KB max
+// contiguous block). Use a 80-line stripe: 480×80×2 = 76,800 bytes.
+// board_lcd_set_pixel_raw ignores pixels outside the active stripe window.
+// board_lcd_flush sends the current stripe and advances s_stripe_y by STRIPE_H.
+// Call board_lcd_flush_all() to iterate all stripes (must redraw each stripe
+// before flushing via the scene callback).
+// ---------------------------------------------------------------------------
+#define STRIPE_H  80                        // scanlines per stripe (fits easily)
+#define N_STRIPES ((LCD_V_RES + STRIPE_H - 1) / STRIPE_H)  // 4 stripes
+
+static esp_lcd_panel_handle_t s_panel    = NULL;
 static spi_device_handle_t    s_touch_spi = NULL;
-static uint16_t              *s_fb = NULL;
+static uint16_t              *s_fb       = NULL;  // STRIPE_H scanlines
 static SemaphoreHandle_t      s_flush_sem = NULL;
-static const char             *TAG = "BOARD_CYD35";
+static const char             *TAG       = "BOARD_CYD35";
+static int                    s_stripe_y = 0;     // top y of current stripe
 
 // ---------------------------------------------------------------------------
 // Colour helpers
@@ -102,7 +113,6 @@ static void init_backlight(void)
 
 static void init_rgb_led(void)
 {
-    // Common-anode: high = off, low = on.
     gpio_config_t cfg = {
         .pin_bit_mask = (1ULL << PIN_LED_R) | (1ULL << PIN_LED_G) | (1ULL << PIN_LED_B),
         .mode = GPIO_MODE_OUTPUT,
@@ -117,7 +127,7 @@ static void init_rgb_led(void)
 }
 
 // ---------------------------------------------------------------------------
-// XPT2046 touch (shares SPI2_HOST with LCD)
+// XPT2046 touch — shares SPI2_HOST with LCD
 // ---------------------------------------------------------------------------
 
 static uint16_t xpt2046_read_raw(uint8_t cmd)
@@ -140,7 +150,7 @@ static bool xpt2046_is_touched(void)
 
 static void init_touch(void)
 {
-    // Touch shares SPI2_HOST — bus already initialized by board_init().
+    // Touch shares SPI2_HOST — bus already initialised by board_init().
     spi_device_interface_config_t dev = {
         .clock_speed_hz = 2 * 1000 * 1000,
         .mode = 0,
@@ -158,15 +168,13 @@ static void init_touch(void)
     };
     gpio_config(&irq_cfg);
 
-    // Send one PD=00 conversion to re-enable PENIRQ in case a previous
-    // session left the XPT2046 in PD=11 (PENIRQ disabled) state.
+    // Wake-up read to re-enable PENIRQ if a prior session left PD=11.
     xpt2046_read_raw(XPT_CMD_X);
 }
 
 // ---------------------------------------------------------------------------
 // Touch calibration — raw ADC at each screen edge in landscape/USB-right.
-// Adjust these after tapping corners and reading serial "touch raw_x= raw_y=" logs.
-// Mapping: raw_y → screen X,  raw_x → screen Y.
+// Adjust after tapping corners and reading "touch raw_x= raw_y=" serial logs.
 // ---------------------------------------------------------------------------
 #define CAL_SX0  200    // raw_y at left edge  (screen x=0)
 #define CAL_SX1  3800   // raw_y at right edge (screen x=479)
@@ -175,8 +183,8 @@ static void init_touch(void)
 
 static void touch_to_screen(uint16_t raw_x, uint16_t raw_y, int *sx, int *sy)
 {
-    *sx = ((int)raw_y - CAL_SX0) * (LCD_H_RES - 1) / (CAL_SX1 - CAL_SX0);
-    *sy = ((int)CAL_SY0 - raw_x) * (LCD_V_RES - 1) / (CAL_SY0 - CAL_SY1);
+    *sx = (CAL_SX1 - (int)raw_y) * (LCD_H_RES - 1) / (CAL_SX1 - CAL_SX0);
+    *sy = (CAL_SY1 - (int)raw_x) * (LCD_V_RES - 1) / (CAL_SY1 - CAL_SY0);
     if (*sx < 0) *sx = 0; else if (*sx >= LCD_H_RES) *sx = LCD_H_RES - 1;
     if (*sy < 0) *sy = 0; else if (*sy >= LCD_V_RES) *sy = LCD_V_RES - 1;
 }
@@ -217,7 +225,7 @@ static const uint8_t *find_glyph(char c)
 static void draw_char_scaled(int x, int y, char c, uint16_t color, int scale)
 {
     const uint8_t *cols = find_glyph(c);
-    for (int col = 0; col < FONT_W; col++) {
+    for (int col = 0; col < FONT_W; col++)
         for (int row = 0; row < FONT_H; row++) {
             if (!(cols[col] & (1 << row))) continue;
             for (int dy = 0; dy < scale; dy++)
@@ -225,7 +233,6 @@ static void draw_char_scaled(int x, int y, char c, uint16_t color, int scale)
                     board_lcd_set_pixel_raw(x + col*scale + dx,
                                            y + row*scale + dy, color);
         }
-    }
 }
 
 static void draw_string_scaled(int x, int y, const char *s, uint16_t color, int scale)
@@ -242,18 +249,18 @@ static void draw_string_scaled(int x, int y, const char *s, uint16_t color, int 
 
 void board_init(void)
 {
-    ESP_LOGI(TAG, "%s init: ST7796 480x320 + XPT2046 touch (shared SPI)", BOARD_NAME);
+    ESP_LOGI(TAG, "%s init: ST7796 480x320 + XPT2046 (shared SPI, stripe FB)",
+             BOARD_NAME);
     init_backlight();
     init_rgb_led();
 
-    // SPI2 bus — shared by LCD and touch.
     spi_bus_config_t buscfg = {
         .sclk_io_num = PIN_LCD_SCLK,
         .mosi_io_num = PIN_LCD_MOSI,
         .miso_io_num = PIN_LCD_MISO,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = LCD_H_RES * LCD_V_RES * sizeof(uint16_t) + 64,
+        .max_transfer_sz = LCD_H_RES * STRIPE_H * sizeof(uint16_t) + 64,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
@@ -283,34 +290,24 @@ void board_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_reset(s_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(s_panel));
     // Landscape, USB connector on right.
-    // With MV=1 (swap_xy), MY controls perceived-X and MX controls perceived-Y.
-    // MY=0, MX=0 gives correct un-inverted X and Y in landscape.
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(s_panel, false, false));
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(s_panel, true));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_panel, true));
 
-    s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * LCD_V_RES * sizeof(uint16_t), 1,
+    s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * STRIPE_H * sizeof(uint16_t), 1,
                MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     assert(s_fb);
 
     init_touch();
-
-    ESP_LOGI(TAG, "%s init done", BOARD_NAME);
+    ESP_LOGI(TAG, "%s init done (stripe=%d px, %d stripes)", BOARD_NAME, STRIPE_H, N_STRIPES);
 }
 
 // ---------------------------------------------------------------------------
 // Board identity
 // ---------------------------------------------------------------------------
 
-const char *board_get_name(void)
-{
-    return BOARD_NAME;
-}
-
-bool board_has_lcd(void)
-{
-    return s_panel != NULL;
-}
+const char *board_get_name(void) { return BOARD_NAME; }
+bool board_has_lcd(void)         { return s_panel != NULL; }
 
 // ---------------------------------------------------------------------------
 // Sanity test — orientation arrows + live touch coordinate display
@@ -352,6 +349,30 @@ static void draw_arrow_up(int ox, int oy, uint16_t color)
             board_lcd_set_pixel_raw(x, y, color);
 }
 
+// Draw the full scene into the current stripe, then flush it.
+// Called once per stripe by the sanity test loop.
+static void render_and_flush_stripe(uint16_t white, uint16_t yellow,
+                                    bool touched, int sx, int sy,
+                                    const char *coord_buf)
+{
+    board_lcd_clear();  // zeroes the stripe buffer
+
+    draw_arrow_up(LCD_H_RES / 4,      LCD_V_RES / 2, white);
+    draw_arrow_right(LCD_H_RES * 3/4, LCD_V_RES / 2, white);
+
+    if (touched) {
+        for (int d = -6; d <= 6; d++) {
+            if (sx+d >= 0 && sx+d < LCD_H_RES)
+                board_lcd_set_pixel_raw(sx+d, sy, yellow);
+            if (sy+d >= 0 && sy+d < LCD_V_RES)
+                board_lcd_set_pixel_raw(sx, sy+d, yellow);
+        }
+        draw_string_scaled(8, LCD_V_RES - 29, coord_buf, yellow, 3);
+    }
+
+    board_lcd_flush();  // DMA this stripe to the panel
+}
+
 void board_lcd_sanity_test(void)
 {
     if (!s_panel || !s_fb) {
@@ -362,56 +383,44 @@ void board_lcd_sanity_test(void)
     uint16_t white  = board_lcd_pack_rgb(255, 255, 255);
     uint16_t yellow = board_lcd_pack_rgb(255, 255,   0);
 
-    board_lcd_clear();
-    draw_arrow_up(LCD_H_RES / 4,     LCD_V_RES / 2, white);
-    draw_arrow_right(LCD_H_RES * 3/4, LCD_V_RES / 2, white);
-    board_lcd_flush();
+    bool     touched = false;
+    int      sx = 0, sy = 0;
+    char     coord_buf[24] = "";
 
-    bool was_touching = false;
+    // Initial paint
+    for (int stripe = 0; stripe < N_STRIPES; stripe++) {
+        s_stripe_y = stripe * STRIPE_H;
+        render_and_flush_stripe(white, yellow, false, 0, 0, "");
+    }
+    s_stripe_y = 0;
 
     while (1) {
         if (!s_touch_spi) { vTaskDelay(pdMS_TO_TICKS(50)); continue; }
 
-        if (xpt2046_is_touched()) {
+        bool now_touched = xpt2046_is_touched();
+
+        if (now_touched) {
             uint32_t sum_x = 0, sum_y = 0;
             for (int i = 0; i < 4; i++) {
                 sum_x += xpt2046_read_raw(XPT_CMD_X);
                 sum_y += xpt2046_read_raw(XPT_CMD_Y);
             }
-            uint16_t raw_x = sum_x / 4;
-            uint16_t raw_y = sum_y / 4;
-
-            int sx, sy;
-            touch_to_screen(raw_x, raw_y, &sx, &sy);
-
+            touch_to_screen(sum_x/4, sum_y/4, &sx, &sy);
             ESP_LOGI(TAG, "touch raw_x=%u raw_y=%u  screen x=%d y=%d",
-                     raw_x, raw_y, sx, sy);
-
-            board_lcd_clear();
-            draw_arrow_up(LCD_H_RES / 4,     LCD_V_RES / 2, white);
-            draw_arrow_right(LCD_H_RES * 3/4, LCD_V_RES / 2, white);
-
-            for (int d = -6; d <= 6; d++) {
-                if (sx+d >= 0 && sx+d < LCD_H_RES)
-                    board_lcd_set_pixel_raw(sx+d, sy, yellow);
-                if (sy+d >= 0 && sy+d < LCD_V_RES)
-                    board_lcd_set_pixel_raw(sx, sy+d, yellow);
-            }
-
-            char buf[24];
-            snprintf(buf, sizeof(buf), "X:%d Y:%d", sx, sy);
-            draw_string_scaled(8, LCD_V_RES - 29, buf, yellow, 3);
-
-            board_lcd_flush();
-            was_touching = true;
-        } else if (was_touching) {
+                     (unsigned)(sum_x/4), (unsigned)(sum_y/4), sx, sy);
+            snprintf(coord_buf, sizeof(coord_buf), "X:%d Y:%d", sx, sy);
+            touched = true;
+        } else if (touched) {
             ESP_LOGI(TAG, "touch released");
-            board_lcd_clear();
-            draw_arrow_up(LCD_H_RES / 4,     LCD_V_RES / 2, white);
-            draw_arrow_right(LCD_H_RES * 3/4, LCD_V_RES / 2, white);
-            board_lcd_flush();
-            was_touching = false;
+            touched = false;
         }
+
+        // Repaint every iteration (simple, no dirty tracking needed)
+        for (int stripe = 0; stripe < N_STRIPES; stripe++) {
+            s_stripe_y = stripe * STRIPE_H;
+            render_and_flush_stripe(white, yellow, touched, sx, sy, coord_buf);
+        }
+        s_stripe_y = 0;
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
@@ -424,35 +433,49 @@ void board_lcd_sanity_test(void)
 int board_lcd_width(void)  { return LCD_H_RES; }
 int board_lcd_height(void) { return LCD_V_RES; }
 
+// Flush the current stripe (rows s_stripe_y .. s_stripe_y+STRIPE_H-1) to panel.
 void board_lcd_flush(void)
 {
     if (!s_panel || !s_fb) return;
-    esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb);
+    int y0 = s_stripe_y;
+    int y1 = y0 + STRIPE_H;
+    if (y1 > LCD_V_RES) y1 = LCD_V_RES;
+    esp_lcd_panel_draw_bitmap(s_panel, 0, y0, LCD_H_RES, y1, s_fb);
     xSemaphoreTake(s_flush_sem, portMAX_DELAY);
 }
 
+// Fill entire screen (iterates all stripes internally).
 void board_lcd_fill(uint16_t color)
 {
     if (!s_panel || !s_fb) return;
     uint16_t c = swap_bytes(color);
-    for (int i = 0; i < LCD_H_RES * LCD_V_RES; i++)
-        s_fb[i] = c;
-    board_lcd_flush();
+    for (int i = 0; i < LCD_H_RES * STRIPE_H; i++) s_fb[i] = c;
+    int saved = s_stripe_y;
+    for (int stripe = 0; stripe < N_STRIPES; stripe++) {
+        s_stripe_y = stripe * STRIPE_H;
+        board_lcd_flush();
+    }
+    s_stripe_y = saved;
 }
 
+// Zero the stripe buffer (does NOT flush — caller drives the stripe loop).
 void board_lcd_clear(void)
 {
-    if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));
+    if (s_fb) memset(s_fb, 0, LCD_H_RES * STRIPE_H * sizeof(uint16_t));
 }
 
+// Write a pixel; silently ignored if y is outside the current stripe.
 void board_lcd_set_pixel_raw(int x, int y, uint16_t color)
 {
-    if (s_fb) s_fb[y * LCD_H_RES + x] = color;
+    if (!s_fb) return;
+    int local_y = y - s_stripe_y;
+    if (local_y < 0 || local_y >= STRIPE_H) return;
+    s_fb[local_y * LCD_H_RES + x] = color;
 }
 
 void board_lcd_set_pixel_rgb(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
-    if (s_fb) s_fb[y * LCD_H_RES + x] = pack_rgb565_swapped(r, g, b);
+    board_lcd_set_pixel_raw(x, y, pack_rgb565_swapped(r, g, b));
 }
 
 uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
@@ -460,9 +483,13 @@ uint16_t board_lcd_pack_rgb(uint8_t r, uint8_t g, uint8_t b)
     return pack_rgb565_swapped(r, g, b);
 }
 
+// Returns pixel from stripe buffer; 0 if y outside current stripe.
 uint16_t board_lcd_get_pixel_raw(int x, int y)
 {
-    return s_fb ? s_fb[y * LCD_H_RES + x] : 0;
+    if (!s_fb) return 0;
+    int local_y = y - s_stripe_y;
+    if (local_y < 0 || local_y >= STRIPE_H) return 0;
+    return s_fb[local_y * LCD_H_RES + x];
 }
 
 void board_lcd_unpack_rgb(uint16_t color, uint8_t *r, uint8_t *g, uint8_t *b)
