@@ -435,7 +435,6 @@ void board_lcd_sanity_test(void)
             was_touching = false;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 

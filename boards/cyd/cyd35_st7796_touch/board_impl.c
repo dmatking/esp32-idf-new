@@ -421,8 +421,6 @@ void board_lcd_sanity_test(void)
             render_and_flush_stripe(white, yellow, touched, sx, sy, coord_buf);
         }
         s_stripe_y = 0;
-
-        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
