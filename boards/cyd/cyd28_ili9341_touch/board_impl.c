@@ -294,7 +294,7 @@ void board_init(void)
         .reset_gpio_num = PIN_LCD_RST,
         // ILI9341 panels have BGR physical connections; this sets MADCTL BGR=1
         // so the panel correctly interprets our RGB565 pixel data.
-        .rgb_endian = LCD_RGB_ENDIAN_BGR,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
         .bits_per_pixel = 16,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(io, &panel_cfg, &s_panel));
