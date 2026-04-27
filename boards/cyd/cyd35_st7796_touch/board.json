@@ -1,0 +1,17 @@
+{
+  "display_name": "CYD 3.5\" ST7796 Resistive Touch (E32R35T/E32N35T)",
+  "panel": "ST7796",
+  "has_touch": true,
+  "screen": {
+    "size_inches": 3.5,
+    "resolution": "320x480",
+    "technology": "IPS",
+    "shape": "rect"
+  },
+  "traits": [
+    "spi",
+    "resistive-touch",
+    "esp32",
+    "rgb-led"
+  ]
+}

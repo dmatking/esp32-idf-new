@@ -1,0 +1,1 @@
+list(APPEND EXTRA_REQUIRES esp_lcd)
