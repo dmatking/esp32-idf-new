@@ -14,6 +14,7 @@ idf-new my_project --board waveshare/wvshr185_round_touch --feature tf_card --si
 
 | Board                                | Chip      | Display                         | Interface | Touch              | Board ID                                     |
 | ------------------------------------ | --------- | ------------------------------- | --------- | ------------------ | -------------------------------------------- |
+| ESP32‑P4 Function EV Board           | ESP32‑P4  | EK79007 4.3" IPS 1024×600       | MIPI-DSI  | GT911              | `espressif/esp32p4_function_ev`              |
 | M5Stack Tab5                         | ESP32‑P4  | ST7123 5.0" IPS 720×1280        | MIPI-DSI  | ST7123 (combined)  | `m5stack/tab5`                               |
 | Waveshare P4 WiFi6 Touch LCD 4B      | ESP32‑P4  | ST7703 4.0" IPS 720×720         | MIPI-DSI  | GT911              | `waveshare/wvshr_p4_720_touch`               |
 | LilyGO T4 S3 AMOLED touch            | ESP32‑S3  | RM690B0 2.41" AMOLED 450×600    | QSPI      | CST226             | `lilygo/t4s3_amoled_touch`                   |
