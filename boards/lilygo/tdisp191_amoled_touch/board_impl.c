@@ -372,6 +372,22 @@ void board_lcd_flush(void)
     amoled_push_buffer(s_fb, LCD_H_RES * LCD_V_RES);
 }
 
+void board_lcd_flush_region(int x1, int y1, int x2, int y2)
+{
+    if (!s_lcd_ready || !s_fb) return;
+    if (x1 == 0 && x2 == LCD_H_RES) {
+        // Full-width band: rows are contiguous in s_fb, single push.
+        amoled_set_window(0, y1, LCD_H_RES - 1, y2 - 1);
+        amoled_push_buffer(&s_fb[y1 * LCD_H_RES], (y2 - y1) * LCD_H_RES);
+    } else {
+        // Partial-width: rows are non-contiguous, send one row at a time.
+        for (int y = y1; y < y2; y++) {
+            amoled_set_window(x1, y, x2 - 1, y);
+            amoled_push_buffer(&s_fb[y * LCD_H_RES + x1], x2 - x1);
+        }
+    }
+}
+
 void board_lcd_clear(void)
 {
     if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));
