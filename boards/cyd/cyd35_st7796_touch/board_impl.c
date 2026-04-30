@@ -442,6 +442,15 @@ void board_lcd_flush(void)
     xSemaphoreTake(s_flush_sem, portMAX_DELAY);
 }
 
+void board_lcd_flush_region(int x1, int y1, int x2, int y2)
+{
+    // Stripe framebuffer: full-screen pixel data is not held in RAM.
+    // Region semantics cannot be satisfied; flush the current active stripe.
+    // LVGL integration requires a custom flush callback that drives the stripe loop.
+    (void)x1; (void)y1; (void)x2; (void)y2;
+    board_lcd_flush();
+}
+
 // Fill entire screen (iterates all stripes internally).
 void board_lcd_fill(uint16_t color)
 {
