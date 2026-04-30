@@ -205,8 +205,8 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 }
 ```
 
-- [ ] Add `board_lcd_flush_region()` as above
-- [ ] Verify RM67162 tolerates repeated `set_window` + single-row pushes (timing)
+- [x] Add `board_lcd_flush_region()` as above
+- [ ] Verify RM67162 tolerates repeated `set_window` + single-row pushes (timing — test on hardware)
 
 ---
 
@@ -233,8 +233,8 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 }
 ```
 
-- [ ] Confirm `display_push_colors` signature supports arbitrary x/y/w/h (read impl)
-- [ ] Add `board_lcd_flush_region()` as above
+- [x] Confirm `display_push_colors` signature supports arbitrary x/y/w/h (read impl)
+- [x] Add `board_lcd_flush_region()` as above
 
 ---
 
