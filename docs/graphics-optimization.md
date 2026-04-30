@@ -20,7 +20,7 @@ Add after `board_lcd_flush()`:
 void board_lcd_flush_region(int x1, int y1, int x2, int y2);
 ```
 
-- [ ] Add declaration to `board_interface.h`
+- [x] Add declaration to `board_interface.h`
 
 ### `idf-templates/base_project/main/board_defaults.c`
 
@@ -34,7 +34,7 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 }
 ```
 
-- [ ] Add weak default to `board_defaults.c`
+- [x] Add weak default to `board_defaults.c`
 
 ---
 
@@ -101,7 +101,7 @@ Panel: GC9A01A 240×240 round, SPI.
 Framebuffer: `uint16_t *s_fb` (heap, `LCD_H_RES × LCD_V_RES`).
 Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 - Readiness guard: `s_panel != NULL`
 
 ---
@@ -111,7 +111,7 @@ Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 Same display + panel driver as wvshr200 with CST816S touch added.
 Board guard: `s_panel != NULL`.
 
-- [ ] Add `board_lcd_flush_region()` using template above (identical to wvshr200)
+- [x] Add `board_lcd_flush_region()` using template above (identical to wvshr200)
 
 ---
 
@@ -120,7 +120,7 @@ Board guard: `s_panel != NULL`.
 Panel: GC9A01A 360×360 round, SPI.
 Same pattern as wvshr200.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 
 ---
 
@@ -129,7 +129,7 @@ Same pattern as wvshr200.
 Same display + FT6336U touch.
 Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 
 ---
 
@@ -138,7 +138,7 @@ Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 Panel: GC9A01A 128×128, SPI.
 Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 
 ---
 
@@ -147,7 +147,7 @@ Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 Panel: ST7789 240×320, SPI.
 Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 
 ---
 
@@ -157,7 +157,7 @@ Panel: ILI9341 320×240, SPI shared with XPT2046 touch.
 Framebuffer: full `320×240` RGB565.
 Flush: `esp_lcd_panel_draw_bitmap(s_panel, 0, 0, LCD_H_RES, LCD_V_RES, s_fb)`.
 
-- [ ] Add `board_lcd_flush_region()` using template above
+- [x] Add `board_lcd_flush_region()` using template above
 - Note: SPI bus is shared with touch; touch reads happen between flushes, so no
   additional locking needed for flush_region.
 
@@ -262,7 +262,7 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 }
 ```
 
-- [ ] Add `board_lcd_flush_region()` delegating to `board_lcd_flush()`
+- [x] Add `board_lcd_flush_region()` delegating to `board_lcd_flush()`
 
 ---
 
@@ -278,7 +278,7 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 }
 ```
 
-- [ ] Add `board_lcd_flush_region()` delegating to `board_lcd_flush()`
+- [x] Add `board_lcd_flush_region()` delegating to `board_lcd_flush()`
 
 ---
 
@@ -309,8 +309,8 @@ void board_lcd_flush_region(int x1, int y1, int x2, int y2)
 For LVGL integration this board would need a custom flush callback that understands
 the stripe layout — not a drop-in region flush. Defer until LVGL port is planned.
 
-- [ ] Add `board_lcd_flush_region()` as full-flush delegate with comment
-- [ ] Document LVGL limitation in board README or board_impl.c comment block
+- [x] Add `board_lcd_flush_region()` as full-flush delegate with comment
+- [x] Document LVGL limitation in board_impl.c comment block
 
 ---
 
