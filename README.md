@@ -12,21 +12,23 @@ idf-new my_project --board waveshare/wvshr185_round_touch --feature tf_card --si
 
 ## Supported Boards
 
-| Board                                | Display              | Board ID                                     |
-| ------------------------------------ | -------------------- | -------------------------------------------- |
-| CYD 2.8" ILI9341 resistive touch     | 2.8" TN 240×320      | `cyd/cyd28_ili9341_touch`                    |
-| CYD 3.5" ST7796 resistive touch      | 3.5" IPS 320×480     | `cyd/cyd35_st7796_touch`                     |
-| ESP32-S3-DevKitC + Newhaven 2.4" IPS | 2.4" IPS 240×320     | `espressif/esp32s3_devkitc_nhd240320_st7789` |
-| HackerBox 107 round                  | 1.28" IPS 240×240    | `hackerbox/hb107_round128`                   |
-| LilyGO T4 S3 AMOLED touch            | 2.41" AMOLED 450×600 | `lilygo/t4s3_amoled_touch`                   |
-| LilyGO T-Display S3 AMOLED touch     | 1.91" AMOLED 536×240 | `lilygo/tdisp191_amoled_touch`               |
-| M5Stack Tab5                         | 5.0" IPS 720×1280    | `m5stack/tab5`                               |
-| Waveshare Round LCD 1.85"            | 1.85" IPS 360×360    | `waveshare/wvshr185_round`                   |
-| Waveshare Round Touch LCD 1.85"      | 1.85" IPS 360×360    | `waveshare/wvshr185_round_touch`             |
-| Waveshare Touch LCD 2.0"             | 2.0" IPS 240×320     | `waveshare/wvshr200`                         |
-| Waveshare Touch LCD 2.0" (touch)     | 2.0" IPS 240×320     | `waveshare/wvshr200_touch`                   |
-| Waveshare P4 WiFi6 Touch LCD 4B      | 4.0" IPS 720×720     | `waveshare/wvshr_p4_720_touch`               |
-| Generic (any ESP32, no display)      | —                    | `generic`                                    |
+| Board                                | Chip      | Display                         | Interface | Touch                | Board ID                                     |
+| ------------------------------------ | --------- | ------------------------------- | --------- | -------------------- | -------------------------------------------- |
+| ESP32‑P4 Function EV Board           | ESP32‑P4  | EK79007 4.3" IPS 1024×600       | MIPI-DSI  | GT911                | `espressif/esp32p4_function_ev`              |
+| M5Stack Tab5                         | ESP32‑P4  | ST7123 5.0" IPS 720×1280        | MIPI-DSI  | ST7123 (combined)    | `m5stack/tab5`                               |
+| Waveshare P4 WiFi6 Touch LCD 4B      | ESP32‑P4  | ST7703 4.0" IPS 720×720         | MIPI-DSI  | GT911                | `waveshare/wvshr_p4_720_touch`               |
+| LilyGO T4 S3 AMOLED touch            | ESP32‑S3  | RM690B0 2.41" AMOLED 450×600    | QSPI      | CST226               | `lilygo/t4s3_amoled_touch`                   |
+| LilyGO T-Display S3 AMOLED touch     | ESP32‑S3  | RM67162 1.91" AMOLED 536×240    | QSPI      | CST816S              | `lilygo/tdisp191_amoled_touch`               |
+| Waveshare Round Touch LCD 1.85"      | ESP32‑S3  | ST77916 1.85" IPS 360×360 round | QSPI      | CST816               | `waveshare/wvshr185_round_touch`             |
+| Waveshare Round LCD 1.85"            | ESP32‑S3  | ST77916 1.85" IPS 360×360 round | QSPI      | —                    | `waveshare/wvshr185_round`                   |
+| Waveshare Touch LCD 2.0"             | ESP32‑S3  | ST7789 2.0" IPS 240×320         | SPI       | CST816S              | `waveshare/wvshr200_touch`                   |
+| Waveshare LCD 2.0"                   | ESP32‑S3  | ST7789 2.0" IPS 240×320         | SPI       | —                    | `waveshare/wvshr200`                         |
+| ESP32‑S3-DevKitC + Newhaven 2.4" IPS | ESP32‑S3  | ST7789 2.4" IPS 240×320         | i80 8-bit | —                    | `espressif/esp32s3_devkitc_nhd240320_st7789` |
+| HackerBox 107 round                  | ESP32‑S3  | GC9A01 1.28" IPS 240×240 round  | SPI       | —                    | `hackerbox/hb107_round128`                   |
+| CYD 2.8" ILI9341 resistive touch     | ESP32     | ILI9341 2.8" TN 240×320         | SPI       | XPT2046 (resistive)  | `cyd/cyd28_ili9341_touch`                    |
+| CYD‑S3 2.8" ILI9341 cap. touch      | ESP32‑S3  | ILI9341 2.8" IPS 240×320        | SPI       | FT6336G (capacitive) | `cyd/cyd28s3_ili9341_touch`                  |
+| CYD 3.5" ST7796 resistive touch      | ESP32     | ST7796 3.5" IPS 320×480         | SPI       | XPT2046 (resistive)  | `cyd/cyd35_st7796_touch`                     |
+| Generic (any ESP32, no display)      | any       | —                               | —         | —                    | `generic`                                    |
 
 Run `idf-new --list-boards` to see what's available in your checkout.
 

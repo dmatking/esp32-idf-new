@@ -1,0 +1,17 @@
+{
+  "display_name": "CYD-S3 2.8\" ILI9341 Capacitive Touch (ES3C28P)",
+  "panel": "ILI9341",
+  "has_touch": true,
+  "screen": {
+    "size_inches": 2.8,
+    "resolution": "240x320",
+    "technology": "IPS",
+    "shape": "rect"
+  },
+  "traits": [
+    "spi",
+    "capacitive-touch",
+    "esp32s3",
+    "ws2812b"
+  ]
+}
