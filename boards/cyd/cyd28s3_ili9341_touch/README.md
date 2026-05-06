@@ -46,12 +46,17 @@ Single addressable pixel. Driven via RMT peripheral using the
 ## Notes
 
 - Display is IPS (vs TN on the original CYD); colours are correct from all
-  viewing angles and no inversion quirk is needed.
+  viewing angles, but `esp_lcd_panel_invert_color(panel, true)` is required —
+  IPS ILI9341V panels are normally-white and display 0x0000 as white without it.
 - Touch uses `espressif/esp_lcd_touch_ft5x06`; the FT6336G is protocol-compatible
   with the FT5x06 driver family.
 - `tp_io_cfg.scl_speed_hz = 0` is required when using the legacy `driver/i2c.h`
   API — the legacy driver ignores the speed field and setting it non-zero triggers
   `ESP_ERR_INVALID_ARG` inside the touch component.
+- Touch transform: `flags.swap_xy=1, flags.mirror_x=1` with `x_max=239, y_max=319`
+  (IC portrait dimensions, not display dimensions). The FT6336G reports raw x in the
+  vertical axis (high=top) and raw y in the horizontal axis; mirror_x + swap maps
+  these to landscape display coordinates.
 - Console output goes via USB_SERIAL_JTAG (the ESP32-S3's built-in USB); there is
   no separate USB-to-UART IC on this board.
 - The `espressif/esp_lcd_ili9341`, `espressif/esp_lcd_touch_ft5x06`, and

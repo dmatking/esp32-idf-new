@@ -151,9 +151,13 @@ static void init_touch(void)
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(
         (esp_lcd_i2c_bus_handle_t)TOUCH_I2C_PORT, &tp_io_cfg, &tp_io));
 
+    // FT6336G raw axes: IC-x = vertical (portrait, high=top), IC-y = horizontal (portrait).
+    // Portrait panel is displayed landscape (LCD swap_xy=true). Touch transform:
+    //   mirror_x flips IC-x so 0=top, then swap_xy maps IC-y→display-x, IC-x→display-y.
+    // x_max must be IC portrait x maximum (239), not LCD_H_RES.
     esp_lcd_touch_config_t touch_cfg = {
-        .x_max = LCD_H_RES,
-        .y_max = LCD_V_RES,
+        .x_max = LCD_V_RES - 1,   // IC portrait x max = 239
+        .y_max = LCD_H_RES - 1,   // IC portrait y max = 319 (unused, mirror_y=0)
         .rst_gpio_num = PIN_TOUCH_RST,
         .int_gpio_num = PIN_TOUCH_INT,
         .levels = {
@@ -161,8 +165,8 @@ static void init_touch(void)
             .interrupt = 0,
         },
         .flags = {
-            .swap_xy  = 0,
-            .mirror_x = 0,
+            .swap_xy  = 1,
+            .mirror_x = 1,
             .mirror_y = 0,
         },
     };
@@ -272,6 +276,8 @@ void board_init(void)
     // Landscape, USB connector on right — same orientation as cyd28.
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(s_panel, false, false));
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(s_panel, true));
+    // IPS panel requires color inversion (ILI9341V on IPS vs TN).
+    ESP_ERROR_CHECK(esp_lcd_panel_invert_color(s_panel, true));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_panel, true));
 
     s_fb = heap_caps_aligned_calloc(4, LCD_H_RES * LCD_V_RES * sizeof(uint16_t), 1,
