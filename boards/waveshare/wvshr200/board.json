@@ -1,5 +1,5 @@
 {
-  "display_name": "Waveshare ESP32-S3 Touch LCD 2.0\"",
+  "display_name": "Waveshare ESP32-S3 LCD 2.0\"",
   "panel": "ST7789",
   "has_touch": false,
   "screen": {

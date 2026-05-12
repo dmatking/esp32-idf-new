@@ -147,6 +147,21 @@ void board_lcd_flush(void)
     display_push_colors(0, 0, w, h, s_fb);
 }
 
+void board_lcd_flush_region(int x1, int y1, int x2, int y2)
+{
+    if (!s_fb) return;
+    const int w = amoled_height();
+    if (x1 == 0 && x2 == w) {
+        // Full-width band: rows are contiguous in s_fb, single push.
+        display_push_colors(0, y1, w, y2 - y1, &s_fb[y1 * w]);
+    } else {
+        // Partial-width: rows are non-contiguous, send one row at a time.
+        for (int y = y1; y < y2; y++) {
+            display_push_colors(x1, y, x2 - x1, 1, &s_fb[y * w + x1]);
+        }
+    }
+}
+
 void board_lcd_clear(void)
 {
     if (!s_fb) return;

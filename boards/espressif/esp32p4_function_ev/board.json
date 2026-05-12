@@ -1,0 +1,19 @@
+{
+  "display_name": "ESP32-P4 Function EV Board",
+  "panel": "EK79007",
+  "touch_controller": "GT911",
+  "has_touch": true,
+  "screen": {
+    "size_inches": 4.3,
+    "resolution": "1024x600",
+    "technology": "IPS",
+    "shape": "rect"
+  },
+  "traits": [
+    "ips",
+    "mipi-dsi",
+    "rgb888",
+    "esp32-p4",
+    "touch"
+  ]
+}

@@ -239,36 +239,6 @@ The result is a minimal, fully wired ESP-IDF project ready to build.
 
 ---
 
-## Supported boards
-
-### ESP32-P4
-
-| Board ID                       | Display                | Interface | Touch |
-| ------------------------------ | ---------------------- | --------- | ----- |
-| `m5stack/tab5`                 | ST7123 5" 720×1280 IPS | MIPI-DSI  | Yes   |
-| `waveshare/wvshr_p4_720_touch` | ST7703 4" 720×720 IPS  | MIPI-DSI  | Yes   |
-
-### ESP32-S3
-
-| Board ID                                     | Display                         | Interface | Touch |
-| -------------------------------------------- | ------------------------------- | --------- | ----- |
-| `waveshare/wvshr185_round_touch`             | ST77916 1.85" 360×360 IPS round | QSPI      | Yes   |
-| `waveshare/wvshr185_round`                   | ST77916 1.85" 360×360 IPS round | QSPI      | No    |
-| `waveshare/wvshr200_touch`                   | ST7789 2.0" 240×320 IPS         | SPI       | Yes   |
-| `waveshare/wvshr200`                         | ST7789 2.0" 240×320 IPS         | SPI       | No    |
-| `lilygo/t4s3_amoled_touch`                   | RM690B0 2.41" 450×600 AMOLED    | QSPI      | Yes   |
-| `lilygo/tdisp191_amoled_touch`               | RM67162 1.91" 536×240 AMOLED    | QSPI      | Yes   |
-| `hackerbox/hb107_round128`                   | GC9A01 1.28" 240×240 IPS round  | SPI       | No    |
-| `espressif/esp32s3_devkitc_nhd240320_st7789` | ST7789 2.4" 240×320 IPS         | i80 8-bit | No    |
-
-### Headless / generic
-
-| Board ID  | Notes                                |
-| --------- | ------------------------------------ |
-| `generic` | No LCD; all display calls are no-ops |
-
----
-
 ## Usage
 
 ```bash

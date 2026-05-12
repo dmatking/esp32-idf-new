@@ -348,6 +348,14 @@ void board_lcd_flush(void)
     esp_cache_msync(s_fb, FB_SIZE, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 }
 
+void board_lcd_flush_region(int x1, int y1, int x2, int y2)
+{
+    // MIPI-DSI auto-refresh: display scans s_fb continuously. Partial region
+    // flush offers no bus savings; delegate to full flush.
+    (void)x1; (void)y1; (void)x2; (void)y2;
+    board_lcd_flush();
+}
+
 void board_lcd_fill(uint16_t color)
 {
     if (!s_backbuf) return;

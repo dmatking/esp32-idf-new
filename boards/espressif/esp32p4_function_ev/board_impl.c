@@ -1,10 +1,8 @@
 // Copyright 2025-2026 David M. King
 // SPDX-License-Identifier: Apache-2.0
 //
-// Board implementation for Waveshare ESP32-P4-WIFI6-Touch-LCD-4B
-// 720x720 MIPI-DSI LCD (ST7703), GT911 capacitive touch, WiFi via ESP32-C6
-//
-// Display init ported from gh-stats-dashboard (verified working on hardware).
+// Board implementation for ESP32-P4 Function EV Board
+// 1024x600 MIPI-DSI LCD (EK79007), GT911 capacitive touch, WiFi via ESP32-C6
 
 #include "board_interface.h"
 
@@ -16,28 +14,28 @@
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
-#include "esp_lcd_st7703.h"
+#include "esp_lcd_ek79007.h"
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
-static const char *TAG = "BOARD_WVSHR_P4_720";
+static const char *TAG = "BOARD_ESP32P4_EV";
 
-#define BOARD_NAME "Waveshare ESP32-P4 720x720 Touch"
+#define BOARD_NAME "ESP32-P4 Function EV Board"
 
-#define LCD_W  720
-#define LCD_H  720
+#define LCD_W  1024
+#define LCD_H  600
 #define BPP    3   // RGB888
 
 // MIPI-DSI config
 #define DSI_LANE_NUM        2
-#define DSI_LANE_MBPS       480
-#define DSI_DPI_CLK_MHZ     38
+#define DSI_LANE_MBPS       1000
+#define DSI_DPI_CLK_MHZ     52
 #define DSI_PHY_LDO_CHAN    3
 #define DSI_PHY_LDO_MV      2500
-#define DSI_BK_LIGHT_GPIO   26   // active LOW: 0 = on
+#define DSI_BK_LIGHT_GPIO   26   // active HIGH: 1 = on
 #define DSI_RST_GPIO        27
 
 // Framebuffer size
@@ -102,9 +100,6 @@ static void flush_async(void)
 }
 
 // --- RGB565 ↔ RGB888 helpers ---
-// board_interface.h exposes uint16_t RGB565 as the "raw" pixel format.
-// Internally we store BGR888 in the framebuffer (matching ST7703 byte order).
-
 static inline uint16_t rgb888_to_rgb565(uint8_t r, uint8_t g, uint8_t b)
 {
     return ((uint16_t)(r >> 3) << 11) | ((uint16_t)(g >> 2) << 5) | (b >> 3);
@@ -150,7 +145,7 @@ void board_init(void)
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(dsi_bus, &dbi_cfg, &io));
 
-    // DPI (pixel) interface — timing verified on hardware
+    // DPI (pixel) interface — timing from EK79007 BSP reference
     esp_lcd_dpi_panel_config_t dpi_cfg = {
         .virtual_channel    = 0,
         .dpi_clk_src        = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
@@ -160,20 +155,20 @@ void board_init(void)
         .video_timing = {
             .h_size            = LCD_W,
             .v_size            = LCD_H,
-            .hsync_back_porch  = 50,
-            .hsync_pulse_width = 20,
-            .hsync_front_porch = 50,
-            .vsync_back_porch  = 20,
-            .vsync_pulse_width = 4,
-            .vsync_front_porch = 20,
+            .hsync_back_porch  = 160,
+            .hsync_pulse_width = 10,
+            .hsync_front_porch = 160,
+            .vsync_back_porch  = 23,
+            .vsync_pulse_width = 1,
+            .vsync_front_porch = 12,
         },
-        .flags = { .use_dma2d = true },
     };
 
-    // use_mipi_interface = 1 is required — without it ST7703 inits in RGB mode
-    st7703_vendor_config_t vendor_cfg = {
-        .flags       = { .use_mipi_interface = 1 },
-        .mipi_config = { .dsi_bus = dsi_bus, .dpi_config = &dpi_cfg },
+    ek79007_vendor_config_t vendor_cfg = {
+        .mipi_config = {
+            .dsi_bus   = dsi_bus,
+            .dpi_config = &dpi_cfg,
+        },
     };
 
     esp_lcd_panel_dev_config_t panel_cfg = {
@@ -182,18 +177,18 @@ void board_init(void)
         .bits_per_pixel = 24,
         .vendor_config  = &vendor_cfg,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(io, &panel_cfg, &s_panel));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(io, &panel_cfg, &s_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(s_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(s_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(s_panel, true));
 
-    // Backlight — active LOW on Waveshare board: 0 = on
+    // Backlight — active HIGH on EV board: 1 = on
     gpio_config_t bl_cfg = {
         .pin_bit_mask = 1ULL << DSI_BK_LIGHT_GPIO,
         .mode         = GPIO_MODE_OUTPUT,
     };
     ESP_ERROR_CHECK(gpio_config(&bl_cfg));
-    gpio_set_level(DSI_BK_LIGHT_GPIO, 0);
+    gpio_set_level(DSI_BK_LIGHT_GPIO, 1);
 
     // Get hardware framebuffer pointer from DPI panel
     void *fb0 = NULL;

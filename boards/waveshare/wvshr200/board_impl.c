@@ -180,6 +180,20 @@ void board_lcd_flush(void)
     xSemaphoreTake(s_flush_sem, portMAX_DELAY);
 }
 
+void board_lcd_flush_region(int x1, int y1, int x2, int y2)
+{
+    if (!s_panel || !s_fb) return;
+    if (x1 == 0 && x2 == LCD_H_RES) {
+        esp_lcd_panel_draw_bitmap(s_panel, 0, y1, LCD_H_RES, y2, &s_fb[y1 * LCD_H_RES]);
+        xSemaphoreTake(s_flush_sem, portMAX_DELAY);
+    } else {
+        for (int y = y1; y < y2; y++) {
+            esp_lcd_panel_draw_bitmap(s_panel, x1, y, x2, y + 1, &s_fb[y * LCD_H_RES + x1]);
+            xSemaphoreTake(s_flush_sem, portMAX_DELAY);
+        }
+    }
+}
+
 void board_lcd_clear(void)
 {
     if (s_fb) memset(s_fb, 0, LCD_H_RES * LCD_V_RES * sizeof(uint16_t));

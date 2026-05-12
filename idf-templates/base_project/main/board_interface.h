@@ -29,6 +29,12 @@ int board_lcd_height(void);
 // Push the framebuffer contents to the display. Blocks until complete.
 void board_lcd_flush(void);
 
+// Push a rectangular sub-region of the framebuffer to the display.
+// Coordinates are end-exclusive (x2, y2 are one past the last pixel).
+// Falls back to a full flush on boards where region flushing is not meaningful
+// (MIPI-DSI auto-refresh, stripe framebuffer).
+void board_lcd_flush_region(int x1, int y1, int x2, int y2);
+
 // Clear the framebuffer to black.
 void board_lcd_clear(void);
 
