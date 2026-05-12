@@ -52,7 +52,8 @@ def create_project(name: str, template_dir: Path, destination: Path | None = Non
 
 	shutil.copytree(template_dir, dest_dir)
 	project = Project(name=name, root=dest_dir)
-	project.replace_text("CMakeLists.txt", "project(base_project)", f"project({name})", count=1)
+	cmake_name = Path(name).name
+	project.replace_text("CMakeLists.txt", "project(base_project)", f"project({cmake_name})", count=1)
 	return project
 
 
