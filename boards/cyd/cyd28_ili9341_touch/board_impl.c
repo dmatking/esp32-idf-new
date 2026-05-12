@@ -353,6 +353,13 @@ static void draw_arrow_right(int ox, int oy, uint16_t color)
             board_lcd_set_pixel_raw(x, y, color);
 }
 
+static void fill_rect(int x1, int y1, int x2, int y2, uint16_t color)
+{
+    for (int y = y1; y < y2; y++)
+        for (int x = x1; x < x2; x++)
+            board_lcd_set_pixel_raw(x, y, color);
+}
+
 static void draw_arrow_up(int ox, int oy, uint16_t color)
 {
     // Up-pointing arrow, origin (ox,oy) = centre of the arrow body.
@@ -381,6 +388,20 @@ void board_lcd_sanity_test(void)
 
     uint16_t white  = board_lcd_pack_rgb(255, 255, 255);
     uint16_t yellow = board_lcd_pack_rgb(255, 255,   0);
+    uint16_t red    = board_lcd_pack_rgb(255,   0,   0);
+    uint16_t blue   = board_lcd_pack_rgb(  0,   0, 255);
+
+    // flush_region test: fill screen red, then overwrite fb with blue and
+    // flush only the top-left quadrant.  Correct result: top-left is blue,
+    // rest stays red.  Full-screen flush would turn everything blue.
+    fill_rect(0, 0, LCD_H_RES, LCD_V_RES, red);
+    board_lcd_flush();
+    vTaskDelay(pdMS_TO_TICKS(600));
+
+    fill_rect(0, 0, LCD_H_RES, LCD_V_RES, blue);
+    board_lcd_flush_region(0, 0, LCD_H_RES / 2, LCD_V_RES / 2);
+    ESP_LOGI(TAG, "flush_region test: top-left quadrant should be blue, rest red");
+    vTaskDelay(pdMS_TO_TICKS(2500));
 
     board_lcd_clear();
     draw_arrow_up(80,  LCD_V_RES / 2, white);   // left half
