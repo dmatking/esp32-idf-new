@@ -1,0 +1,23 @@
+{
+  "display_name": "VIEWE UES31S043 4.3\" ESP32-S31 Smart Display",
+  "panel": "RGB 16-bit parallel",
+  "touch_controller": "GT911",
+  "has_touch": true,
+  "screen": {
+    "size_inches": 4.3,
+    "resolution": "800x480",
+    "technology": "IPS",
+    "shape": "rect"
+  },
+  "traits": [
+    "ips",
+    "rgb16",
+    "esp32-s31",
+    "touch",
+    "audio",
+    "sdcard",
+    "led-rgb",
+    "rs485",
+    "can"
+  ]
+}
