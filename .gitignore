@@ -29,3 +29,6 @@ idf_new_tool/idf_new.egg-info/
 claude*.sh
 start-claude.sh
 .claude/
+
+# Dungeon session data
+.dungeon/
